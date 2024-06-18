@@ -178,7 +178,7 @@ for year in years:
             rookies_dfs.append(rookies)
     
             total_stats.to_csv(os.path.join(data_folder_path, f'stats_{year}.csv'), index=False)
-            mvp.to_csv(fos.path.join(data_folder_path, f'mvp_{year}.csv'), index=False)
+            mvp.to_csv(os.path.join(data_folder_path, f'mvp_{year}.csv'), index=False)
             roy.to_csv(os.path.join(data_folder_path, f'roy_{year}.csv'), index=False)
             rookies.to_csv(os.path.join(data_folder_path, f'rookies_{year}.csv'), index=False)
         elif stats_response.status_code == 429 or wins_response.status_code == 429 or awards_response.status_code == 429 or rookie_response.status_code == 429:
