@@ -190,3 +190,76 @@ for year in years:
             print("Failed to fetch the page, wins status code:", wins_response.status_code, "for year:", year)
             print("Failed to fetch the page, awards status code:", awards_response.status_code, "for year:", year)
             print("Failed to fetch the page, rookies status code:", rookie_response.status_code, "for year:", year)
+
+
+start_year = 1977
+end_year = 2024
+years = range(start_year, end_year+1)
+mvps = {}
+roys = {}
+stats = {}
+rookies = {}
+
+for year in years:
+    mvps[year] = pd.read_csv(os.path.join(data_folder_path, f'mvp_{year}.csv'))
+    mvps[year]['Year'] = year
+    roys[year] = pd.read_csv(os.path.join(data_folder_path, f'roy_{year}.csv'))
+    roys[year]['Year'] = year
+    stats[year] = pd.read_csv(os.path.join(data_folder_path, f'stats_{year}.csv'))
+    stats[year]['Year'] = year
+    rookies[year] = pd.read_csv(os.path.join(data_folder_path, f'rookies_{year}.csv'))
+    rookies[year] = pd.merge(rookies[year], stats[year][['Player','Tm', 'Pos', 'Rk', 'W', 'L']], on='Player', how='left')
+    rookies[year]['Pos'] = rookies[year]['Pos'].fillna('Unkown')
+    rookies[year]['Year'] = year
+
+def merge_stats_share(stats, award, new_col_name):
+    #Remove asterix from names
+    stats['Player'] = stats['Player'].str.replace('*', '', regex=False)
+    award['Player'] = award['Player'].str.replace('*', '', regex=False)
+
+    #Normalize voting shares so they sum to 100
+    total_share = sum(award['Share'])
+    award['Share'] = award['Share']*100/total_share
+    
+    merge = pd.merge(stats, award[['Player', 'Share']], on='Player', how='left')
+    merge = merge.fillna(0.000)
+    merge = merge.rename(columns={'Share': new_col_name})
+    return merge
+
+mvp_stats_merges = {}
+roy_rookies_merges = {}
+
+for year in years:
+    mvp_stats_merges[year] = merge_stats_share(stats[year],mvps[year],'MVP Vote Share')
+    roy_rookies_merges[year] = merge_stats_share(rookies[year],roys[year],'ROY Vote Share')
+
+all_mvp_data = pd.concat(mvp_stats_merges.values(), ignore_index=True)
+all_roy_data = pd.concat(roy_rookies_merges.values(), ignore_index=True)
+
+#Preparing PER48 Models:
+all_mvp_data_per_48 = all_mvp_data.copy()
+all_roy_data_per_48 = all_roy_data.copy()
+
+new_cols = ['FGP48', 'FGAP48', '3PP48', '3PAP48', '2PP48', '2PAP48', 'FTP48', 'FTAP48', 'ORBP48', 'DRBP48', 'TRBP48', 'ASTP48',
+       'STLP48', 'BLKP48', 'TOVP48', 'PFP48', 'PTSP48']
+old_cols = ['FG', 'FGA', '3P', '3PA', '2P', '2PA', 'FT', 'FTA', 'ORB', 'DRB', 'TRB', 'AST',
+       'STL', 'BLK', 'TOV', 'PF', 'PTS']
+
+all_roy_data_per_48['2P'] = all_roy_data_per_48['FG'] - all_roy_data_per_48['3P']
+all_roy_data_per_48['2PA'] = all_roy_data_per_48['FGA'] - all_roy_data_per_48['3PA']
+all_roy_data_per_48['DRB'] = all_roy_data_per_48['TRB'] - all_roy_data_per_48['ORB']
+
+all_mvp_data_per_48[new_cols] = all_mvp_data_per_48[old_cols].div(all_mvp_data_per_48['MP'], axis=0) * 48 
+all_mvp_data_per_48.replace([np.inf, -np.inf], 0, inplace=True)
+all_mvp_data_per_48 = all_mvp_data_per_48.fillna(0)
+all_roy_data_per_48[new_cols] = all_roy_data_per_48[old_cols].div(all_roy_data_per_48['MP'], axis=0) * 48 
+all_roy_data_per_48.replace([np.inf, -np.inf], 0, inplace=True)
+all_roy_data_per_48 = all_roy_data_per_48.fillna(0)
+
+#Remove Categorical Data
+all_mvp_data_per_48 = all_mvp_data_per_48.drop(['Player', 'Tm'], axis=1)
+all_roy_data_per_48 = all_roy_data_per_48.drop(['Player', 'Tm'], axis=1)
+
+#One-hot encode the Position
+all_mvp_data_per_48 = pd.get_dummies(all_mvp_data_per_48, columns=['Pos'])
+all_roy_data_per_48 = pd.get_dummies(all_roy_data_per_48, columns=['Pos'])

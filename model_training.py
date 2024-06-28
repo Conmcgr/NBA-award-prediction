@@ -11,45 +11,113 @@ from sklearn.ensemble import StackingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import GradientBoostingRegressor
 import xgboost as xgb
-from data_collection_cleaning import data_folder_path
+from data_collection_cleaning import end_year, start_year, years, all_mvp_data_per_48, all_roy_data_per_48
+import joblib
 
-start_year = 1977
-end_year = 2024
-years = range(start_year, end_year+1)
-mvps = {}
-roys = {}
-stats = {}
-rookies = {}
+#Split training and testing data (keep each year's data together)
+test_percentage = 0.2
+num_years_test = int(test_percentage * (end_year-start_year))
+test_years = random.sample(years, num_years_test)
 
-for year in years:
-    mvps[year] = pd.read_csv(os.path.join(data_folder_path, f'mvp_{year}.csv'))
-    mvps[year]['Year'] = year
-    roys[year] = pd.read_csv(os.path.join(data_folder_path, f'roy_{year}.csv'))
-    roys[year]['Year'] = year
-    stats[year] = pd.read_csv(os.path.join(data_folder_path, f'stats_{year}.csv'))
-    stats[year]['Year'] = year
-    rookies[year] = pd.read_csv(os.path.join(data_folder_path, f'rookies_{year}.csv'))
-    rookies[year] = pd.merge(rookies[year], stats[year][['Player','Tm', 'Pos', 'Rk', 'W', 'L']], on='Player', how='left')
-    rookies[year]['Pos'] = rookies[year]['Pos'].fillna('Unkown')
-    rookies[year]['Year'] = year
+mvp_train_per_48 = all_mvp_data_per_48[all_mvp_data_per_48['Year'].isin(test_years) == False]
+mvp_test_per_48 = all_mvp_data_per_48[all_mvp_data_per_48['Year'].isin(test_years)]
 
-def merge_stats_share(stats, award, new_col_name):
-    #Remove asterix from names
-    stats['Player'] = stats['Player'].str.replace('*', '', regex=False)
-    award['Player'] = award['Player'].str.replace('*', '', regex=False)
+roy_train_per_48 = all_roy_data_per_48[all_roy_data_per_48['Year'].isin(test_years) == False]
+roy_test_per_48 = all_roy_data_per_48[all_roy_data_per_48['Year'].isin(test_years)]
 
-    #Normalize voting shares so they sum to 100
-    total_share = sum(award['Share'])
-    award['Share'] = award['Share']*100/total_share
+#Create Features --> X = features used to predict, Y = feature to preict
+mvp_x_train_per_48 = mvp_train_per_48.drop(['MVP Vote Share'], axis=1)
+mvp_x_test_per_48 = mvp_test_per_48.drop(['MVP Vote Share'], axis=1)
+
+mvp_y_train_per_48 = mvp_train_per_48['MVP Vote Share']
+mvp_y_test_per_48 = mvp_test_per_48['MVP Vote Share']
+
+roy_x_train_per_48 = roy_train_per_48.drop(['ROY Vote Share'], axis=1)
+roy_x_test_per_48 = roy_test_per_48.drop(['ROY Vote Share'], axis=1)
+
+roy_y_train_per_48 = roy_train_per_48['ROY Vote Share']
+roy_y_test_per_48 = roy_test_per_48['ROY Vote Share']
+
+#Function to create prediction model
+def create_rfr_preds(x_train, y_train, x_test, y_test, num_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1):
+    # Initialize the model
+    model = RandomForestRegressor(n_estimators=num_estimators, max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, random_state=42)
+
+    # Fit the model
+    model.fit(x_train, y_train)
+
+    # Predict and evaluate
+    preds = model.predict(x_test)
     
-    merge = pd.merge(stats, award[['Player', 'Share']], on='Player', how='left')
-    merge = merge.fillna(0.000)
-    merge = merge.rename(columns={'Share': new_col_name})
-    return merge
+    #cut off low values and normalize
+    significant_vote_threshold = 0.5
+    preds[preds < significant_vote_threshold] = 0
+    preds =(preds / sum(preds)) * 100
+    
+    mse = mean_squared_error(y_test, preds)
 
-mvp_stats_merges = {}
-roy_rookies_merges = {}
+    return [model, preds, mse]
 
-for year in years:
-    mvp_stats_merges[year] = merge_stats_share(stats[year],mvps[year],'MVP Vote Share')
-    roy_rookies_merges[year] = merge_stats_share(rookies[year],roys[year],'ROY Vote Share')
+mvp_per_48_rfr = create_rfr_preds(mvp_x_train_per_48, mvp_y_train_per_48, mvp_x_test_per_48, mvp_y_test_per_48, num_estimators = 50, max_depth = 10, min_samples_leaf = 1, min_samples_split = 2)
+mvp_per_48_model = mvp_per_48_rfr[0]
+mvp_per_48_preds = mvp_per_48_rfr[1]
+mvp_per_48_mse = mvp_per_48_rfr[2]
+                         
+print(f'Mean Squared Error: {mvp_per_48_mse}')
+
+calibrated_mvp_model = IsotonicRegression(out_of_bounds='clip')
+calibrated_mvp_model.fit(mvp_per_48_preds, mvp_y_test_per_48)
+
+# Apply isotonic regression to adjust the predictions
+calibrated_mvp_preds_iso = calibrated_mvp_model.predict(mvp_per_48_preds) #Final MVP Model
+
+# Evaluate the calibrated predictions
+calibrated_mvp_mse_iso = mean_squared_error(mvp_y_test_per_48, calibrated_mvp_preds_iso)
+print(f'MVP Calibrated Mean Squared Error with Isotonic Regression: {calibrated_mvp_mse_iso}')
+
+#Per 48 ROY Model:
+
+#ROY Model
+
+roy_per_48_rfr = create_rfr_preds(roy_x_train_per_48, roy_y_train_per_48, roy_x_test_per_48, roy_y_test_per_48, num_estimators=74, max_depth=10, min_samples_split=2, min_samples_leaf=30)
+roy_per_48_model = roy_per_48_rfr[0]
+roy_per_48_preds = roy_per_48_rfr[1]
+roy_per_48_mse = roy_per_48_rfr[2]
+                         
+print(f'Mean Squared Error: {roy_per_48_mse}')
+
+#ROY Stacked Model
+
+# Define base models
+estimators = [
+    ('rf', RandomForestRegressor(n_estimators=50, random_state=42, max_depth=15, min_samples_leaf=1, min_samples_split=30)),
+    ('gb', GradientBoostingRegressor(n_estimators=100, random_state=42))
+]
+
+# Initialize Stacking Regressor
+roy_stack_model = StackingRegressor(
+    estimators=estimators,
+    final_estimator=Ridge(alpha=100)
+)
+
+# Fit the model
+roy_stack_model.fit(roy_x_train_per_48, roy_y_train_per_48)
+roy_stacked_preds = roy_stack_model.predict(roy_x_test_per_48)
+
+# Evaluate the stacked model
+roy_stacked_mse = mean_squared_error(roy_y_test_per_48, roy_stacked_preds)
+print(f'ROY Stacked Model MSE: {roy_stacked_mse}')
+
+calibrated_roy_model = IsotonicRegression(out_of_bounds='clip')
+calibrated_roy_model.fit(roy_stacked_preds, roy_y_test_per_48)
+
+# Apply isotonic regression to adjust the predictions
+calibrated_roy_preds = calibrated_roy_model.predict(roy_stacked_preds)
+
+# Evaluate the calibrated predictions
+calibrated_roy_mse = mean_squared_error(roy_y_test_per_48, calibrated_roy_preds)
+print(f'ROY Calibrated Mean Squared Error with Isotonic Regression: {calibrated_roy_mse}')
+
+#Save and export models
+joblib.dump(calibrated_mvp_model, 'models/mvp_model.pkl')
+joblib.dump(calibrated_roy_model, 'models/roy_model.pkl')
