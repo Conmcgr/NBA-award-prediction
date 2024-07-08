@@ -3,54 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Awards Prediction</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>NBA Award Predictions</title>
     <style>
         body {
-            padding-top: 50px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
         }
         .container {
-            max-width: 600px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .card {
-            margin-top: 50px;
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="card-body">
-                <h3 class="card-title text-center">Upload CSV for Prediction</h3>
-                <form action="/predict" method="post" enctype="multipart/form-data" class="mt-4">
-                    <div class="form-group">
-                        <label for="award_type">Award Type</label>
-                        <select class="form-control" name="award_type" id="award_type" required>
-                            <option value="MVP">MVP</option>
-                            <option value="ROY">ROY</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="file">Upload CSV File</label>
-                        <input type="file" class="form-control-file" name="file" id="file" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Upload and Predict</button>
-                </form>
-                <div class="alert alert-info mt-3" role="alert" id="infoAlert" style="display: none;">
-                    Processing your request. Please wait...
-                </div>
-            </div>
-        </div>
+        <h1>NBA Award Predictions</h1>
+        <form action="/predict" method="post" enctype="multipart/form-data">
+            <label for="award_type">Select Award Type:</label>
+            <select name="award_type" id="award_type" required>
+                <option value="MVP">MVP</option>
+                <option value="ROY">ROY</option>
+            </select>
+            <input type="file" name="file" accept=".csv" required>
+            <button type="submit">Predict</button>
+        </form>
     </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        $(document).ready(function(){
-            $('form').on('submit', function(){
-                $('#infoAlert').show();
-            });
-        });
-    </script>
 </body>
 </html>

@@ -5,7 +5,9 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.isotonic import IsotonicRegression
 import joblib
-from data_collection_cleaning import end_year, start_year, years, all_mvp_data_per_48, all_roy_data_per_48
+import heapq
+from data_collection_cleaning import end_year, start_year, years, all_mvp_data_per_48, all_roy_data_per_48, mvp_48_with_categorical, roy_48_with_categorical
+
 
 # Split training and testing data (keep each year's data together)
 test_percentage = 0.2
@@ -43,7 +45,8 @@ def create_rfr_preds(x_train, y_train, x_test, y_test, num_estimators=100, max_d
     preds = model.predict(x_test)
     
     # Cut off low values and normalize
-    significant_vote_threshold = 0.5
+    top_8 = heapq.nlargest(8, preds)[-1]
+    significant_vote_threshold = top_8
     preds[preds < significant_vote_threshold] = 0
     preds = (preds / sum(preds)) * 100
     
@@ -92,3 +95,23 @@ joblib.dump(mvp_per_48_model, 'models/mvp_base_model.pkl')  # Save the base Rand
 joblib.dump(calibrated_mvp_model, 'models/calibrated_mvp_model.pkl')  # Save the calibrated model
 joblib.dump(roy_per_48_model, 'models/roy_base_model.pkl')  # Save the base Random Forest model
 joblib.dump(calibrated_roy_model, 'models/calibrated_roy_model.pkl')  # Save the calibrated model
+
+
+
+# Test the model on a random year and create a DataFrame with the results
+mvp_test_year = random.choice(test_years)
+mvp_test_data_random_year = all_mvp_data_per_48[all_mvp_data_per_48['Year'] == mvp_test_year]
+mvp_test_x =  mvp_test_data_random_year.drop(['MVP Vote Share'], axis=1)
+
+# Predict
+mvp_test_year_preds = mvp_per_48_model.predict(mvp_test_x)
+
+# Create a DataFrame with the results
+mvp_test_year_test = mvp_48_with_categorical[mvp_48_with_categorical['Year'] == mvp_test_year].copy()
+mvp_test_year_test['MVP Vote Share Prediction'] = mvp_test_year_preds
+mvp_test_year_test.reset_index(drop=True)
+
+# Get top 10 predictions
+top_10_results_random_year = mvp_test_year_test.sort_values(by='MVP Vote Share Prediction', ascending=False).head(10)
+
+print(top_10_results_random_year)

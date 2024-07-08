@@ -256,6 +256,10 @@ all_roy_data_per_48[new_cols] = all_roy_data_per_48[old_cols].div(all_roy_data_p
 all_roy_data_per_48.replace([np.inf, -np.inf], 0, inplace=True)
 all_roy_data_per_48 = all_roy_data_per_48.fillna(0)
 
+#Save DF with player names
+mvp_48_with_categorical = all_mvp_data_per_48.copy()
+roy_48_with_categorical = all_roy_data_per_48.copy()
+
 #Remove Categorical Data
 all_mvp_data_per_48 = all_mvp_data_per_48.drop(['Player', 'Tm'], axis=1)
 all_roy_data_per_48 = all_roy_data_per_48.drop(['Player', 'Tm'], axis=1)
