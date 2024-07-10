@@ -2,33 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prediction Results</title>
-    <style>
-        table {
-            width: 50%;
-            margin: 0 auto;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 8px 12px;
-            text-align: center;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1 style="text-align:center;">Top 5 Predictions</h1>
-    <div style="text-align:center;">
-        {% for table in tables %}
-            {{ table|safe }}
-        {% endfor %}
-    </div>
-    <div style="text-align:center;">
-        <a href="/">Go back</a>
+    <div class="container">
+        <h2>Top 10 Predictions</h2>
+        <div class="table-container">
+            {{ tables[0]|safe }}
+        </div>
+        <a href="{{ url_for('index') }}" class="btn">Go Back</a>
     </div>
 </body>
 </html>

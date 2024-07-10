@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template
 import pandas as pd
 import joblib
 import os
@@ -11,7 +11,7 @@ mvp_base_model = joblib.load('models/mvp_base_model.pkl')
 roy_base_model = joblib.load('models/roy_base_model.pkl')
 print("Models loaded successfully.")
 
-def load_models(award_type):
+def load_model(award_type):
     if award_type == 'MVP':
         return mvp_base_model
     elif award_type == 'ROY':
@@ -20,25 +20,15 @@ def load_models(award_type):
         raise ValueError("Invalid award type. Choose 'MVP' or 'ROY'.")
 
 def preprocess_data(data, required_columns):
-    # Keep player names
     players = data['Player']
     data = data.drop(['Player', 'Tm'], axis=1, errors='ignore')
-    
-    # Handle missing values
     data = data.fillna(0)
-    
-    # Encode categorical variables if any (assuming 'Pos' is a categorical variable)
     if 'Pos' in data.columns:
         data = pd.get_dummies(data, columns=['Pos'], drop_first=True)
-    
-    # Ensure all required columns are present
     for col in required_columns:
         if col not in data.columns:
-            data[col] = 0  # Add missing columns with default value 0
-    
-    # Ensure the columns are in the correct order
+            data[col] = 0
     data = data[required_columns]
-    
     return data, players
 
 @app.route('/')
@@ -52,39 +42,24 @@ def predict():
         file = request.files['file']
         if not file:
             return "No file uploaded", 400
-        
-        print("File uploaded successfully.")
+
         data = pd.read_csv(file)
-        print("CSV file read successfully.")
-        
-        base_model = load_models(award_type)
-        print(f"Model loaded for {award_type}.")
-        
-        # Get the required columns from the training data
+        model = load_model(award_type)
         if award_type == 'MVP':
             required_columns = mvp_base_model.feature_names_in_
         else:
             required_columns = roy_base_model.feature_names_in_
-        
+
         processed_data, players = preprocess_data(data, required_columns)
-        print("Data preprocessed successfully.")
-        
-        print(f"Processed Data: {processed_data.head()}")
-        
-        predictions = base_model.predict(processed_data)
-        print(f"Model Predictions: {predictions[:10]}")
+        predictions = model.predict(processed_data)
         
         results = pd.DataFrame({
             'Player': players,
             'Predicted Vote Share': predictions
         })
         
-        # Get top 5 predictions
-        top_5 = results.nlargest(5, 'Predicted Vote Share')
-        print(f"Top 5 Predictions: {top_5}")
-        
-        # Render results on the webpage
-        return render_template('results.html', tables=[top_5.to_html(classes='data', header="true")], titles=top_5.columns.values)
+        top_10 = results.nlargest(10, 'Predicted Vote Share')
+        return render_template('results.html', tables=[top_10.to_html(classes='data', header="true")])
 
 if __name__ == "__main__":
     if not os.path.exists('models'):
