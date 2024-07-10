@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, send_file
+from flask import Flask, request, render_template, redirect, url_for
 import pandas as pd
 import joblib
 import os
@@ -76,18 +76,15 @@ def predict():
         
         results = pd.DataFrame({
             'Player': players,
-            'Prediction': predictions
+            'Predicted Vote Share': predictions
         })
         
         # Get top 5 predictions
-        top_5 = results.nlargest(5, 'Prediction')
+        top_5 = results.nlargest(5, 'Predicted Vote Share')
         print(f"Top 5 Predictions: {top_5}")
         
-        output_path = 'top_5_predictions.csv'
-        top_5.to_csv(output_path, index=False)
-        print("Top 5 predictions saved successfully.")
-        
-        return send_file(output_path, as_attachment=True)
+        # Render results on the webpage
+        return render_template('results.html', tables=[top_5.to_html(classes='data', header="true")], titles=top_5.columns.values)
 
 if __name__ == "__main__":
     if not os.path.exists('models'):
