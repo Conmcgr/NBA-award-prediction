@@ -99,6 +99,7 @@ The models are evaluated using Mean Squared Error (MSE) and calibrated using Iso
 
 ## Project Structure
 
+```bash
 nba-award-prediction/
 │
 ├── data/ # Directory to store scraped data
@@ -117,6 +118,7 @@ nba-award-prediction/
 ├── requirements.txt # Python package dependencies
 ├── README.md # Project README file
 └── render.yaml # Render deployment configuration (optional)
+```
 
 ## Contributing
 
