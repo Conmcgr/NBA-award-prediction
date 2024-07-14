@@ -86,3 +86,32 @@ calibrated_roy_model.fit(roy_per_48_preds, roy_y_test_per_48)
 # Apply isotonic regression to adjust the predictions
 calibrated_roy_preds_iso = calibrated_roy_model.predict(roy_per_48_preds)
 
+# Evaluate the calibrated predictions
+calibrated_roy_mse = mean_squared_error(roy_y_test_per_48, calibrated_roy_preds_iso)
+print(f'ROY Calibrated Mean Squared Error with Isotonic Regression: {calibrated_roy_mse}')
+
+# Save and export models
+joblib.dump(mvp_per_48_model, 'models/mvp_base_model.pkl')  # Save the base Random Forest model
+joblib.dump(calibrated_mvp_model, 'models/calibrated_mvp_model.pkl')  # Save the calibrated model
+joblib.dump(roy_per_48_model, 'models/roy_base_model.pkl')  # Save the base Random Forest model
+joblib.dump(calibrated_roy_model, 'models/calibrated_roy_model.pkl')  # Save the calibrated model
+
+
+
+# Test the model on a random year and create a DataFrame with the results
+mvp_test_year = random.choice(test_years)
+mvp_test_data_random_year = all_mvp_data_per_48[all_mvp_data_per_48['Year'] == mvp_test_year]
+mvp_test_x =  mvp_test_data_random_year.drop(['MVP Vote Share'], axis=1)
+
+# Predict
+mvp_test_year_preds = mvp_per_48_model.predict(mvp_test_x)
+
+# Create a DataFrame with the results
+mvp_test_year_test = mvp_48_with_categorical[mvp_48_with_categorical['Year'] == mvp_test_year].copy()
+mvp_test_year_test['MVP Vote Share Prediction'] = mvp_test_year_preds
+mvp_test_year_test.reset_index(drop=True)
+
+# Get top 10 predictions
+top_10_results_random_year = mvp_test_year_test.sort_values(by='MVP Vote Share Prediction', ascending=False).head(10)
+
+print(top_10_results_random_year)
