@@ -6,3 +6,4 @@ gunicorn==21.2.0
 scikit-learn==1.2.2
 beautifulsoup4==4.12.2
 requests==2.31.0
+pip
