@@ -4,12 +4,40 @@
     <meta charset="UTF-8">
     <title>Prediction Results</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function toggleTable() {
+            var simplifiedTable = document.getElementById('simplified-table');
+            var fullTable = document.getElementById('full-table');
+            var toggleButton = document.getElementById('toggle-button');
+            
+            if (fullTable.style.display === 'none') {
+                simplifiedTable.style.display = 'none';
+                fullTable.style.display = 'block';
+                toggleButton.textContent = 'Hide Full Stats';
+            } else {
+                simplifiedTable.style.display = 'block';
+                fullTable.style.display = 'none';
+                toggleButton.textContent = 'Show Full Stats';
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('simplified-table').style.display = 'block';
+            document.getElementById('full-table').style.display = 'none';
+        }
+    </script>
 </head>
 <body>
     <div class="container">
-        <h2>Top 10 Predictions</h2>
+        <h2>Top 5 Predictions</h2>
+        <button id="toggle-button" onclick="toggleTable()">Show Full Stats</button>
         <div class="table-container">
-            {{ tables[0]|safe }}
+            <div id="simplified-table">
+                {{ simplified_table|safe }}
+            </div>
+            <div id="full-table" style="display: none;">
+                {{ full_table|safe }}
+            </div>
         </div>
         <a href="{{ url_for('index') }}" class="btn">Go Back</a>
     </div>

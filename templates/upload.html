@@ -11,14 +11,14 @@
         <h1>NBA Award Predictions</h1>
         <div class="instructions">
             <h2>Welcome to the NBA Award Prediction Tool</h2>
-            <p>This tool uses machine learning to predict the most likely candidates for NBA MVP (Most Valuable Player) and ROY (Rookie of the Year) awards based on player statistics.</p>
+            <p>This tool uses machine learning to predict the most likely candidates for NBA MVP (Most Valuable Player) and ROY (Rookie of the Year) awards based on player statistics. While it is trained on NBA data, feel free to use it on your own data from high school, college, or even recreational leauges!</p>
             <h3>How to use:</h3>
             <ol>
                 <li>Select the award type you want to predict (MVP or ROY).</li>
-                <li>Upload a CSV file containing player statistics for the season.</li>
-                <li>Click "Predict" to see the top 10 candidates for the selected award.</li>
+                <li>Choose to use data from a past year or upload your own CSV file.</li>
+                <li>Click "Predict" to see the top 5 candidates for the selected award.</li>
             </ol>
-            <p>For the best results, ensure your CSV file includes all relevant player statistics such as points, rebounds, assists, etc., normalized to per-game or per-48-minute values.</p>
+            <p>If uploading your own CSV, ensure it includes all relevant player statistics such as points, rebounds, assists, etc., normalized to per-game or per-48-minute values.</p>
         </div>
         <form action="/predict" method="post" enctype="multipart/form-data">
             <label for="award_type">Select Award Type:</label>
@@ -26,9 +26,49 @@
                 <option value="MVP">MVP</option>
                 <option value="ROY">ROY</option>
             </select>
-            <input type="file" name="file" accept=".csv" required>
+            
+            <label for="data_source">Choose Data Source:</label>
+            <select name="data_source" id="data_source" required>
+                <option value="upload">Upload CSV</option>
+                <option value="past_year">Use Past Year Data</option>
+            </select>
+            
+            <div id="upload_section">
+                <input type="file" name="file" accept=".csv">
+            </div>
+            
+            <div id="past_year_section" style="display:none;">
+                <label for="year">Select Year:</label>
+                <select name="year" id="year">
+                    {% for year in range(2024, 1976, -1) %}
+                        <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
             <button type="submit">Predict</button>
         </form>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var dataSource = document.getElementById('data_source');
+            var uploadSection = document.getElementById('upload_section');
+            var pastYearSection = document.getElementById('past_year_section');
+    
+            function toggleSections() {
+                if (dataSource.value === 'upload') {
+                    uploadSection.style.display = 'block';
+                    pastYearSection.style.display = 'none';
+                } else {
+                    uploadSection.style.display = 'none';
+                    pastYearSection.style.display = 'block';
+                }
+            }
+    
+            dataSource.addEventListener('change', toggleSections);
+            toggleSections();
+        });
+    </script>
 </body>
 </html>

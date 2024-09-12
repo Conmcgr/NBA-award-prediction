@@ -69,3 +69,50 @@ button {
 button:hover {
     background-color: #45a049;
 }
+
+#past_year_section {
+    margin-top: 1rem;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+table.data th, table.data td {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+table.data th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+table.data tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table.data tr:hover {
+    background-color: #f5f5f5;
+}
+
+#toggle-button {
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+#toggle-button:hover {
+    background-color: #45a049;
+}
